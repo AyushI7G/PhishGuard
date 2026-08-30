@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-900">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhishGuard — Phishing Threat Detector</title>
+  <meta name="description" content="Clean, AI-powered phishing and spam detection for emails, senders, URLs, and Gmail inboxes.">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#EFF6FF',
+              100: '#DBEAFE',
+              500: '#3B82F6',
+              600: '#2563EB',
+              700: '#1D4ED8',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Menlo', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Plotly.js -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Identity Services (GIS) for Gmail OAuth -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col bg-slate-50 text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
+
+  <!-- APP HEADER: Clean, crisp, and simple -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Title -->
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <span class="font-bold text-base tracking-tight text-slate-900">PhishGuard</span>
+            <span class="text-xs text-slate-500 ml-2 hidden sm:inline">Phishing Threat Detection</span>
+          </div>
+        </div>
+
+        <!-- Export Action -->
+        <div>
+          <button id="btnQuickReport" onclick="exportFullAuditReport()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition border border-slate-200">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-slate-600"></i>
+            <span>Export Report</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- NAVIGATION TABS -->
+      <nav class="flex space-x-1 sm:space-x-4 border-t border-slate-100 overflow-x-auto custom-scrollbar" aria-label="Tabs">
+        <button id="tabBtnEmail" onclick="switchTab('email')" class="tab-btn flex items-center gap-2 py-3 px-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 transition whitespace-nowrap">
+          <i data-lucide="mail" class="w-4 h-4"></i>
+          <span>Email Scanner</span>
+        </button>
+
+        <button id="tabBtnSender" onclick="switchTab('sender')" class="tab-btn flex items-center gap-2 py-3 px-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-900 transition whitespace-nowrap">
+          <i data-lucide="at-sign" class="w-4 h-4"></i>
+          <span>Sender Verifier</span>
+        </button>
+
+        <button id="tabBtnUrl" onclick="switchTab('url')" class="tab-btn flex items-center gap-2 py-3 px-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-900 transition whitespace-nowrap">
+          <i data-lucide="link" class="w-4 h-4"></i>
+          <span>URL Scanner</span>
+        </button>
+
+        <button id="tabBtnGmail" onclick="switchTab('gmail')" class="tab-btn flex items-center gap-2 py-3 px-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-900 transition whitespace-nowrap">
+          <i data-lucide="inbox" class="w-4 h-4"></i>
+          <span>Gmail Inbox</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6">
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: EMAIL SCANNER -->
+    <!-- ============================================================ -->
+    <div id="tabContentEmail" class="tab-content space-y-6">
+      
+      <!-- Presets bar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900">Email Threat Analysis</h2>
+          <p class="text-xs text-slate-500">Paste email text or choose an example below to check for phishing.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-semibold text-slate-500">Examples:</span>
+          <button onclick="loadSampleEmail('phish_paypal')" class="text-xs px-2.5 py-1 rounded-md bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-medium transition">
+            PayPal Scam
+          </button>
+          <button onclick="loadSampleEmail('phish_ceo')" class="text-xs px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 font-medium transition">
+            CEO Wire Request
+          </button>
+          <button onclick="loadSampleEmail('legit_work')" class="text-xs px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-medium transition">
+            Normal Email
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Grid: Input on Left, Result on Right -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Input Area -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+            
+            <div class="space-y-1">
+              <label for="emailSenderInput" class="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                <span>Sender Address (Optional)</span>
+                <span class="text-[11px] text-slate-400 font-normal">Auto-detected</span>
+              </label>
+              <input 
+                id="emailSenderInput" 
+                type="text" 
+                placeholder="e.g. security@paypal-verify.xyz"
+                class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 rounded-lg px-3 py-2 text-xs text-slate-800 font-mono transition"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <label for="emailInput" class="text-xs font-semibold text-slate-700">Email Content</label>
+                <button onclick="clearEmailInput()" class="text-xs text-slate-400 hover:text-slate-600 transition">Clear</button>
+              </div>
+              <textarea 
+                id="emailInput" 
+                rows="8" 
+                class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 rounded-lg p-3 text-xs text-slate-800 placeholder-slate-400 font-mono transition resize-none custom-scrollbar"
+                placeholder="Paste email subject and body text here..."
+              ></textarea>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span id="emailCharCount">0 characters</span>
+              <span id="emailWordCount">0 words</span>
+            </div>
+
+            <button 
+              id="btnAnalyzeEmail"
+              onclick="handleAnalyzeEmail()"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition shadow-sm"
+            >
+              <i data-lucide="shield-check" class="w-4 h-4"></i>
+              <span>Analyze Email</span>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Result View -->
+        <div class="lg:col-span-7 space-y-4">
+          
+          <!-- Empty State -->
+          <div id="emailEmptyState" class="bg-white border border-slate-200 border-dashed rounded-xl p-12 text-center space-y-2">
+            <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+              <i data-lucide="mail-search" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-slate-800">No Email Analyzed</h3>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">Enter email content on the left or select an example above to see threat risk and detection factors.</p>
+          </div>
+
+          <!-- Loading State -->
+          <div id="emailLoadingState" class="hidden bg-white border border-slate-200 rounded-xl p-12 text-center space-y-3">
+            <div class="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p class="text-xs font-semibold text-slate-700">Analyzing email content...</p>
+          </div>
+
+          <!-- Result Container -->
+          <div id="emailResultContainer" class="hidden space-y-4">
+            
+            <!-- Verdict Banner -->
+            <div id="emailVerdictBanner" class="border rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div id="verdictIconBox" class="w-11 h-11 rounded-lg flex items-center justify-center text-white text-lg font-bold">
+                  <i id="verdictIcon" data-lucide="shield-alert" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span id="verdictTitle" class="text-base font-bold tracking-tight text-slate-900">PHISHING DETECTED</span>
+                    <span id="verdictRiskBadge" class="text-[11px] px-2 py-0.5 rounded font-bold uppercase">HIGH RISK</span>
+                  </div>
+                  <p id="verdictSubtitle" class="text-xs text-slate-500 mt-0.5">Confidence: <span id="verdictConfidence" class="font-semibold text-slate-800">95%</span></p>
+                </div>
+              </div>
+
+              <!-- Score -->
+              <div class="text-right pr-2">
+                <span class="block text-[10px] text-slate-400 uppercase font-semibold">Risk Score</span>
+                <span id="verdictScoreNum" class="text-xl font-bold text-slate-900">94/100</span>
+              </div>
+            </div>
+
+            <!-- Sender intelligence if present -->
+            <div id="emailSenderResultBox" class="hidden bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
+              <div class="flex items-center justify-between text-xs font-semibold text-slate-700">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="at-sign" class="w-3.5 h-3.5 text-blue-600"></i>
+                  <span>Sender & Domain Intelligence</span>
+                </span>
+                <button onclick="jumpToSenderVerifierFromEmail()" class="text-blue-600 hover:text-blue-700 font-medium">Verify Sender &rarr;</button>
+              </div>
+              <div id="emailSenderContent" class="text-xs"></div>
+            </div>
+
+            <!-- Email Authentication Headers (SPF/DKIM/DMARC) -->
+            <div id="emailHeaderResultBox" class="hidden bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
+              <div class="flex items-center justify-between text-xs font-semibold text-slate-700">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="key" class="w-3.5 h-3.5 text-blue-600"></i>
+                  <span>Authentication & Security Headers</span>
+                </span>
+                <span id="headerAuthOverallStatus" class="text-[11px] font-medium text-slate-500"></span>
+              </div>
+              <div id="emailHeaderContent" class="grid grid-cols-3 gap-2 text-xs"></div>
+            </div>
+
+            <!-- Embedded Links Diagnostic -->
+            <div id="emailUrlsResultBox" class="hidden bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
+              <div class="flex items-center justify-between text-xs font-semibold text-slate-700">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="link" class="w-3.5 h-3.5 text-blue-600"></i>
+                  <span>Embedded Link Analysis</span>
+                </span>
+                <span id="emailUrlsCountBadge" class="text-[11px] px-2 py-0.5 rounded font-medium bg-slate-100 text-slate-600"></span>
+              </div>
+              <div id="emailUrlsContent" class="space-y-1.5 text-xs"></div>
+            </div>
+
+            <!-- SHAP Factors Chart -->
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-2">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <i data-lucide="bar-chart-2" class="w-4 h-4 text-blue-600"></i>
+                  <span>Feature Contributions</span>
+                </h3>
+                <span class="text-[10px] text-slate-400">Red = Increases Phishing Risk &bull; Blue = Safe Indicator</span>
+              </div>
+              <div id="shapPlotEmail" class="w-full h-56 rounded-lg overflow-hidden bg-slate-50 border border-slate-100"></div>
+            </div>
+
+            <!-- Signals & Explanation -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              
+              <div class="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
+                <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-blue-600"></i>
+                  <span>Detected Indicators</span>
+                </h4>
+                <div id="emailDetectedSignalsList" class="space-y-1.5 text-xs"></div>
+              </div>
+
+              <div class="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
+                <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <i data-lucide="shield" class="w-3.5 h-3.5 text-blue-600"></i>
+                  <span>Security Guidance</span>
+                </h4>
+                <div id="emailReasoningBox" class="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-100 leading-relaxed font-sans"></div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: SENDER VERIFIER -->
+    <!-- ============================================================ -->
+    <div id="tabContentSender" class="tab-content hidden space-y-6">
+      
+      <!-- Sender Presets -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900">Sender Address Verification</h2>
+          <p class="text-xs text-slate-500">Check email addresses for spoofing, lookalike domains, or disposable mailboxes.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-semibold text-slate-500">Examples:</span>
+          <button onclick="loadSampleSender('paypal_fake')" class="text-xs px-2.5 py-1 rounded-md bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-medium transition">
+            Fake PayPal
+          </button>
+          <button onclick="loadSampleSender('ceo_spoof')" class="text-xs px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 font-medium transition">
+            Lookalike .link
+          </button>
+          <button onclick="loadSampleSender('google_legit')" class="text-xs px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-medium transition">
+            Official Google
+          </button>
+        </div>
+      </div>
+
+      <!-- Input Form -->
+      <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <div class="relative flex-1">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <i data-lucide="at-sign" class="w-4 h-4"></i>
+            </div>
+            <input 
+              id="senderInput" 
+              type="text" 
+              placeholder='e.g. "PayPal Security" <security@paypa1-update.xyz>'
+              class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 rounded-lg pl-9 pr-3 py-2.5 text-xs text-slate-800 font-mono transition"
+              onkeydown="if(event.key==='Enter') handleAnalyzeSender()"
+            />
+          </div>
+          <button 
+            id="btnScanSender"
+            onclick="handleAnalyzeSender()"
+            class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition shadow-sm whitespace-nowrap"
+          >
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Verify Address</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="senderEmptyState" class="bg-white border border-slate-200 border-dashed rounded-xl p-10 text-center space-y-2">
+        <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+          <i data-lucide="at-sign" class="w-5 h-5"></i>
+        </div>
+        <h3 class="text-sm font-semibold text-slate-800">No Address Verified</h3>
+        <p class="text-xs text-slate-500 max-w-sm mx-auto">Enter an email address above to check domain authenticity and reputation.</p>
+      </div>
+
+      <!-- Loading State -->
+      <div id="senderLoadingState" class="hidden bg-white border border-slate-200 rounded-xl p-10 text-center space-y-3">
+        <div class="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-xs font-semibold text-slate-700">Verifying sender address...</p>
+      </div>
+
+      <!-- Sender Result -->
+      <div id="senderResultContainer" class="hidden space-y-4">
+        
+        <!-- Banner -->
+        <div id="senderVerdictBanner" class="border rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div id="senderVerdictIconBox" class="w-11 h-11 rounded-lg flex items-center justify-center text-white text-lg font-bold">
+              <i id="senderVerdictIcon" data-lucide="alert-octagon" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span id="senderVerdictTitle" class="text-base font-bold tracking-tight text-slate-900">SPOOFED SENDER ADDRESS</span>
+                <span id="senderVerdictBadge" class="text-[11px] px-2 py-0.5 rounded font-bold uppercase">FLAGGED</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">Address: <span id="senderScannedTarget" class="font-mono text-slate-800 font-semibold"></span></p>
+            </div>
+          </div>
+
+          <div class="text-right pr-2">
+            <span class="block text-[10px] text-slate-400 uppercase font-semibold">Risk Score</span>
+            <span id="senderScoreNum" class="text-xl font-bold text-slate-900">98%</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          
+          <!-- Left: Structure & Heuristics -->
+          <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-sm">
+            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <i data-lucide="info" class="w-3.5 h-3.5 text-blue-600"></i>
+              <span>Address Structure</span>
+            </h3>
+            <div id="senderStructureGrid" class="space-y-1.5 text-xs"></div>
+            
+            <div class="pt-2">
+              <h4 class="text-xs font-bold text-slate-800 mb-2">Checks</h4>
+              <div id="senderHeuristicsMatrix" class="grid grid-cols-2 gap-2 text-xs"></div>
+            </div>
+          </div>
+
+          <!-- Right: Signals & Recommendation -->
+          <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-sm">
+            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <i data-lucide="shield" class="w-3.5 h-3.5 text-blue-600"></i>
+              <span>Assessment & Guidance</span>
+            </h3>
+            <div id="senderReasoningBox" class="text-xs text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 leading-relaxed"></div>
+            
+            <div class="pt-2">
+              <h4 class="text-xs font-bold text-slate-800 mb-2">Detected Flags</h4>
+              <div id="senderDetectedSignalsList" class="space-y-1.5 text-xs"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: URL SCANNER -->
+    <!-- ============================================================ -->
+    <div id="tabContentUrl" class="tab-content hidden space-y-6">
+      
+      <!-- Presets -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900">URL & Website Scanner</h2>
+          <p class="text-xs text-slate-500">Scan links for phishing indicators, deceptive subdomains, or IP hosting.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-semibold text-slate-500">Examples:</span>
+          <button onclick="loadSampleUrl('http://verify-paypal-user.security-update.xyz/login')" class="text-xs px-2.5 py-1 rounded-md bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 font-medium transition">
+            Fake PayPal URL
+          </button>
+          <button onclick="loadSampleUrl('https://github.com/microsoft/vscode')" class="text-xs px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-medium transition">
+            GitHub (Safe)
+          </button>
+        </div>
+      </div>
+
+      <!-- Input Form -->
+      <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <div class="relative flex-1">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <i data-lucide="link" class="w-4 h-4"></i>
+            </div>
+            <input 
+              id="urlInput"
+              type="text" 
+              placeholder="e.g. http://paypal-verify-login.xyz/signin"
+              class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 rounded-lg pl-9 pr-3 py-2.5 text-xs text-slate-800 font-mono transition"
+              onkeydown="if(event.key==='Enter') handleScanUrl()"
+            />
+          </div>
+          <button 
+            id="btnScanUrl"
+            onclick="handleScanUrl()"
+            class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition shadow-sm whitespace-nowrap"
+          >
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Scan Link</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="urlEmptyState" class="bg-white border border-slate-200 border-dashed rounded-xl p-10 text-center space-y-2">
+        <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+          <i data-lucide="link" class="w-5 h-5"></i>
+        </div>
+        <h3 class="text-sm font-semibold text-slate-800">No URL Scanned</h3>
+        <p class="text-xs text-slate-500 max-w-sm mx-auto">Enter a website URL above to inspect its security profile.</p>
+      </div>
+
+      <!-- Result Container -->
+      <div id="urlResultContainer" class="hidden space-y-4">
+        
+        <div id="urlVerdictBanner" class="border rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div id="urlVerdictIconBox" class="w-11 h-11 rounded-lg flex items-center justify-center text-white text-lg font-bold">
+              <i id="urlVerdictIcon" data-lucide="alert-octagon" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span id="urlVerdictTitle" class="text-base font-bold tracking-tight text-slate-900">PHISHING LINK DETECTED</span>
+                <span id="urlVerdictBadge" class="text-[11px] px-2 py-0.5 rounded font-bold uppercase">FLAGGED</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">Target: <span id="urlScannedTarget" class="font-mono text-slate-800 font-semibold"></span></p>
+            </div>
+          </div>
+
+          <div class="text-right pr-2">
+            <span class="block text-[10px] text-slate-400 uppercase font-semibold">Threat Risk</span>
+            <span id="urlScoreNum" class="text-xl font-bold text-slate-900">99%</span>
+          </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+          <h3 class="text-xs font-bold text-slate-800">URL Diagnostics</h3>
+          <div id="urlDiagnosticsGrid" class="space-y-2 text-xs"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 4: GMAIL INBOX -->
+    <!-- ============================================================ -->
+    <div id="tabContentGmail" class="tab-content hidden space-y-4">
+      
+      <!-- Live Gmail Account Connection Status Banner -->
+      <div id="gmailAuthBanner" class="p-4 rounded-xl border border-blue-200 bg-blue-50/70 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-white border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs shrink-0">
+            <svg class="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="gmailAuthTitle" class="text-xs font-bold text-slate-900">Connect Your Gmail Account</span>
+              <span id="gmailAuthBadge" class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-800">OAuth 2.0 Ready</span>
+            </div>
+            <p id="gmailAuthDesc" class="text-[11px] text-slate-600 mt-0.5">Authorize read-only access to scan your real incoming Gmail inbox for phishing threats & fraudulent vectors.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="btnConnectGoogle" onclick="handleGoogleSignIn()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition shadow-xs">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+            <span id="btnConnectGoogleText">Connect Gmail</span>
+          </button>
+          <button id="btnDisconnectGoogle" onclick="handleGoogleSignOut()" class="hidden items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition border border-slate-200">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span>Disconnect</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Header & Actions -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-slate-900">Inbox Threat Scanner</h2>
+            <span id="inboxSourceBadge" class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-600 border border-slate-200">Demo Sandbox</span>
+          </div>
+          <p id="inboxSubheader" class="text-xs text-slate-500">Live multi-signal threat evaluation & cryptographic header verification.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openAddEmailModal()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition border border-slate-200">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Add Test Email</span>
+          </button>
+          <button id="btnRescanInbox" onclick="refreshInboxData()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition shadow-sm">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Rescan</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Bar -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
+          <span class="text-[11px] text-slate-500 font-medium">Total Emails</span>
+          <div id="statTotalInbox" class="text-xl font-bold text-slate-900 mt-0.5">7</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
+          <span class="text-[11px] text-red-600 font-medium flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+            <span>Phishing</span>
+          </span>
+          <div id="statPhishInbox" class="text-xl font-bold text-red-600 mt-0.5">3</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
+          <span class="text-[11px] text-amber-600 font-medium">Suspicious</span>
+          <div id="statSuspiciousInbox" class="text-xl font-bold text-amber-600 mt-0.5">1</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
+          <span class="text-[11px] text-blue-600 font-medium">Safe</span>
+          <div id="statLegitInbox" class="text-xl font-bold text-blue-600 mt-0.5">3</div>
+        </div>
+      </div>
+
+      <!-- Filter / Search -->
+      <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="relative w-full sm:w-72">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+          </div>
+          <input 
+            id="inboxSearchInput"
+            type="text" 
+            placeholder="Search sender, subject, keywords..."
+            oninput="filterInboxItems()"
+            class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 transition"
+          />
+        </div>
+
+        <div class="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto custom-scrollbar">
+          <button onclick="setInboxFilter('all')" class="inbox-filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white transition whitespace-nowrap" data-filter="all">All</button>
+          <button onclick="setInboxFilter('phishing')" class="inbox-filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition whitespace-nowrap" data-filter="phishing">Phishing</button>
+          <button onclick="setInboxFilter('suspicious')" class="inbox-filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition whitespace-nowrap" data-filter="suspicious">Suspicious</button>
+          <button onclick="setInboxFilter('legitimate')" class="inbox-filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition whitespace-nowrap" data-filter="legitimate">Safe</button>
+        </div>
+      </div>
+
+      <!-- Email list -->
+      <div id="inboxListContainer" class="space-y-2.5"></div>
+
+    </div>
+
+  </main>
+
+  <!-- EMAIL DETAIL MODAL -->
+  <div id="emailDetailModal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-xl overflow-hidden">
+      
+      <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2">
+          <div id="modalVerdictBadge" class="px-2.5 py-0.5 rounded text-xs font-bold uppercase text-white bg-red-600">
+            PHISHING
+          </div>
+          <span class="text-xs text-slate-500">Risk Score: <strong id="modalRiskScore" class="text-slate-900">98%</strong></span>
+        </div>
+        <button onclick="closeEmailModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-200 transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto custom-scrollbar space-y-4 text-xs">
+        
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1.5">
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">From:</span>
+            <span id="modalFrom" class="font-mono text-slate-800 font-semibold"></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">Subject:</span>
+            <span id="modalSubject" class="text-slate-900 font-semibold"></span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-medium">Date:</span>
+            <span id="modalDate" class="text-slate-500"></span>
+          </div>
+        </div>
+
+        <div>
+          <span class="font-semibold text-slate-800 block mb-1.5">Message Body</span>
+          <div id="modalBodyText" class="p-3 bg-slate-50 border border-slate-200 rounded-lg font-mono text-slate-700 whitespace-pre-line leading-relaxed max-h-40 overflow-y-auto custom-scrollbar"></div>
+        </div>
+
+        <div>
+          <span class="font-semibold text-slate-800 block mb-1.5">Identified Signals</span>
+          <div id="modalSignalsList" class="space-y-1"></div>
+        </div>
+
+      </div>
+
+      <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+        <button onclick="loadModalEmailIntoAnalyzer()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-1.5">
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          <span>Open in Analyzer</span>
+        </button>
+        <button onclick="closeEmailModal()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 hover:bg-slate-300 text-slate-700 transition">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ADD EMAIL TO INBOX MODAL -->
+  <div id="addEmailModal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-xl max-w-lg w-full p-5 shadow-xl space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="text-sm font-bold text-slate-900">Add Test Email to Inbox</h3>
+        <button onclick="closeAddEmailModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Sender Email</label>
+          <input id="newEmailFrom" type="text" placeholder="e.g. security-alert@suspicious-domain.xyz" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 focus:border-blue-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Subject</label>
+          <input id="newEmailSubject" type="text" placeholder="e.g. Urgent: Account Verification Required" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 focus:border-blue-500" />
+        </div>
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Message Body</label>
+          <textarea id="newEmailBody" rows="4" placeholder="Type message body..." class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-800 focus:border-blue-500 font-mono"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+        <button onclick="closeAddEmailModal()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">Cancel</button>
+        <button onclick="submitNewCustomEmail()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white">Add & Scan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-200 py-4 text-center text-xs text-slate-500 bg-white">
+    <p>PhishGuard &bull; Phishing Threat Detection</p>
+  </footer>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    // State management
+    let currentTab = 'email';
+    let inboxEmails = [];
+    let currentModalEmail = null;
+    let lastAnalysisReport = null;
+    let lastSenderAnalysisReport = null;
+
+    // Presets
+    const SAMPLE_EMAILS = {
+      phish_paypal: `From: "PayPal Security" <security-alert@paypa1-account-update.xyz>\nSubject: URGENT: Your PayPal Account Has Been Suspended! Verify Identity\n\nDear Valued Customer,\n\nWe detected multiple unauthorized sign-in attempts to your PayPal account from unknown IP 194.26.29.11.\n\nFor your safety, YOUR ACCOUNT HAS BEEN TEMPORARILY SUSPENDED.\n\nYou must verify your password and banking details within 24 hours to prevent permanent account termination.\n\nClick here immediately: http://verify-paypal-user.security-update.xyz/login\n\nUrgent action required!\n\nSecurity Team\nPayPal Inc.`,
+      phish_ceo: `From: "Chief Executive Officer" <executive-office@wire-transfer-ceo.link>\nSubject: CONFIDENTIAL: Urgent Wire Transfer Request for Vendor Acquisition\n\nAre you at your desk right now?\n\nI am currently in an urgent confidential meeting with acquisition attorneys. We need an immediate wire transfer of $48,500 processed for vendor escrow.\n\nDo not call my cell phone as I cannot talk. Confirm when you are ready and I will email you the account numbers to wire right away.\n\nRegards,\nChief Executive Officer`,
+      legit_work: `From: "Sarah Miller" <sarah.miller@acme-corp.com>\nSubject: Project Kickoff Q3: Slides & Agenda for Monday 10:00 AM\n\nHi everyone,\n\nI have finalized the agenda and quarterly targets for our Q3 strategy rollout. Please review the shared Google Doc before our kickoff meeting on Monday at 10:00 AM PST.\n\nMeeting link: https://meet.google.com/abc-defg-hij\n\nBest regards,\nSarah Miller\nLead Product Architect`
+    };
+
+    const SAMPLE_SENDERS = {
+      paypal_fake: `"PayPal Security Team" <security-alert@paypa1-account-update.xyz>`,
+      ceo_spoof: `"Office of CEO" <executive-office@wire-transfer-ceo.link>`,
+      google_legit: `"Google Cloud Security" <cloud-noreply@google.com>`
+    };
+
+    // Initialize Lucide icons & Google Auth
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initGoogleAuth();
+      fetchInboxData();
+
+      // Email textarea listener
+      const emailInput = document.getElementById('emailInput');
+      if (emailInput) {
+        emailInput.addEventListener('input', () => {
+          const val = emailInput.value || '';
+          document.getElementById('emailCharCount').innerText = `${val.length} characters`;
+          const words = val.trim().split(/\s+/).filter(Boolean).length;
+          document.getElementById('emailWordCount').innerText = `${words} words`;
+
+          const senderInput = document.getElementById('emailSenderInput');
+          if (senderInput && !senderInput.value.trim()) {
+            const match = val.match(/^From:\s*(.+)$/im);
+            if (match && match[1]) {
+              senderInput.value = match[1].trim();
+            }
+          }
+        });
+      }
+    });
+
+    // Tab switching
+    function switchTab(tabId) {
+      currentTab = tabId;
+      const tabs = ['email', 'sender', 'url', 'gmail'];
+      
+      tabs.forEach(t => {
+        const content = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        
+        if (!content || !btn) return;
+
+        if (t === tabId) {
+          content.classList.remove('hidden');
+          btn.className = 'tab-btn flex items-center gap-2 py-3 px-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 transition whitespace-nowrap';
+        } else {
+          content.classList.add('hidden');
+          btn.className = 'tab-btn flex items-center gap-2 py-3 px-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-900 transition whitespace-nowrap';
+        }
+      });
+
+      lucide.createIcons();
+      
+      if (tabId === 'email' && lastAnalysisReport) {
+        setTimeout(() => renderShapPlot('shapPlotEmail', lastAnalysisReport.top_email_text_features), 100);
+      }
+    }
+
+    function loadSampleEmail(key) {
+      const emailInput = document.getElementById('emailInput');
+      const senderInput = document.getElementById('emailSenderInput');
+      if (SAMPLE_EMAILS[key]) {
+        emailInput.value = SAMPLE_EMAILS[key];
+        const match = SAMPLE_EMAILS[key].match(/^From:\s*(.+)$/im);
+        if (match && match[1]) {
+          senderInput.value = match[1].trim();
+        }
+        emailInput.dispatchEvent(new Event('input'));
+        handleAnalyzeEmail();
+      }
+    }
+
+    function clearEmailInput() {
+      const emailInput = document.getElementById('emailInput');
+      const senderInput = document.getElementById('emailSenderInput');
+      if (emailInput) emailInput.value = '';
+      if (senderInput) senderInput.value = '';
+      if (emailInput) emailInput.dispatchEvent(new Event('input'));
+      document.getElementById('emailEmptyState').classList.remove('hidden');
+      document.getElementById('emailResultContainer').classList.add('hidden');
+    }
+
+    function loadSampleSender(key) {
+      const senderInput = document.getElementById('senderInput');
+      if (SAMPLE_SENDERS[key]) {
+        senderInput.value = SAMPLE_SENDERS[key];
+        handleAnalyzeSender();
+      }
+    }
+
+    function loadSampleUrl(url) {
+      const urlInput = document.getElementById('urlInput');
+      urlInput.value = url;
+      handleScanUrl();
+    }
+
+    // SENDER VERIFIER LOGIC
+    async function handleAnalyzeSender() {
+      const senderVal = (document.getElementById('senderInput').value || '').trim();
+      if (!senderVal) return;
+
+      const emptyState = document.getElementById('senderEmptyState');
+      const loadingState = document.getElementById('senderLoadingState');
+      const resultContainer = document.getElementById('senderResultContainer');
+      const btn = document.getElementById('btnScanSender');
+
+      emptyState.classList.add('hidden');
+      resultContainer.classList.add('hidden');
+      loadingState.classList.remove('hidden');
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/predict_sender', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender_email: senderVal })
+        });
+
+        const data = await res.json();
+        loadingState.classList.add('hidden');
+        btn.disabled = false;
+
+        if (data.error) {
+          emptyState.classList.remove('hidden');
+          return;
+        }
+
+        lastSenderAnalysisReport = data;
+        renderSenderResults(data);
+        resultContainer.classList.remove('hidden');
+        lucide.createIcons();
+      } catch (err) {
+        console.error(err);
+        loadingState.classList.add('hidden');
+        btn.disabled = false;
+        emptyState.classList.remove('hidden');
+      }
+    }
+
+    function renderSenderResults(data) {
+      const isPhish = data.classification === 'Phishing';
+      const isSuspicious = data.classification === 'Suspicious';
+
+      const banner = document.getElementById('senderVerdictBanner');
+      const iconBox = document.getElementById('senderVerdictIconBox');
+      const icon = document.getElementById('senderVerdictIcon');
+      const title = document.getElementById('senderVerdictTitle');
+      const badge = document.getElementById('senderVerdictBadge');
+      const scoreNum = document.getElementById('senderScoreNum');
+      const target = document.getElementById('senderScannedTarget');
+
+      target.innerText = data.sender_email;
+      scoreNum.innerText = `${Math.round(data.risk_score)}%`;
+
+      if (isPhish) {
+        banner.className = 'border border-red-200 bg-red-50/50 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4';
+        iconBox.className = 'w-11 h-11 rounded-lg bg-red-600 text-white flex items-center justify-center text-lg font-bold';
+        icon.setAttribute('data-lucide', 'alert-octagon');
+        title.innerText = 'SPOOFED SENDER ADDRESS';
+        title.className = 'text-base font-bold tracking-tight text-red-900';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded font-bold uppercase bg-red-100 text-red-700 border border-red-200';
+        badge.innerText = 'FLAGGED';
+      } else if (isSuspicious) {
+        banner.className = 'border border-amber-200 bg-amber-50/50 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4';
+        iconBox.className = 'w-11 h-11 rounded-lg bg-amber-500 text-white flex items-center justify-center text-lg font-bold';
+        icon.setAttribute('data-lucide', 'alert-triangle');
+        title.innerText = 'SUSPICIOUS SENDER';
+        title.className = 'text-base font-bold tracking-tight text-amber-900';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200';
+        badge.innerText = 'CAUTION';
+      } else {
+        banner.className = 'border border-blue-200 bg-blue-50/50 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4';
+        iconBox.className = 'w-11 h-11 rounded-lg bg-blue-600 text-white flex items-center justify-center text-lg font-bold';
+        icon.setAttribute('data-lucide', 'check-circle-2');
+        title.innerText = 'VERIFIED SENDER';
+        title.className = 'text-base font-bold tracking-tight text-blue-900';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200';
+        badge.innerText = 'SAFE';
+      }
+
+      // Populate Signals List
+      const signalsList = document.getElementById('senderDetectedSignalsList');
+      signalsList.innerHTML = '';
+      const detected = data.detected_signals || ['Standard sender characteristics.'];
+      detected.forEach(sig => {
+        const div = document.createElement('div');
+        div.className = `p-2 rounded-lg border text-xs flex items-center gap-2 ${isPhish ? 'bg-red-50 border-red-200 text-red-800' : isSuspicious ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`;
+        div.innerHTML = `
+          <i data-lucide="${isPhish ? 'alert-circle' : isSuspicious ? 'alert-triangle' : 'check-circle'}" class="w-3.5 h-3.5 shrink-0"></i>
+          <span>${escapeHtml(sig)}</span>
+        `;
+        signalsList.appendChild(div);
+      });
+
+      // Structure Grid
+      const p = data.parsed_structure || {};
+      const structGrid = document.getElementById('senderStructureGrid');
+      structGrid.innerHTML = `
+        <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 flex justify-between">
+          <span class="text-slate-500">Display Name</span>
+          <span class="font-semibold text-slate-800">${escapeHtml(p.displayName || 'None')}</span>
+        </div>
+        <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 flex justify-between">
+          <span class="text-slate-500">Domain</span>
+          <span class="font-mono text-slate-800 font-medium">${escapeHtml(p.domain || '—')}</span>
+        </div>
+        <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 flex justify-between">
+          <span class="text-slate-500">TLD</span>
+          <span class="font-mono ${data.heuristic_flags?.is_suspicious_tld ? 'text-red-600 font-bold' : 'text-slate-800'}">.${escapeHtml(p.tld || '—')}</span>
+        </div>
+      `;
+
+      // Checks
+      const h = data.heuristic_flags || {};
+      const matrix = document.getElementById('senderHeuristicsMatrix');
+      matrix.innerHTML = `
+        <div class="p-2 rounded-lg border flex flex-col justify-between ${h.brand_impersonation ? 'bg-red-50 border-red-200 text-red-800 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700'}">
+          <span class="text-[11px] text-slate-500">Brand Impersonation</span>
+          <span class="text-xs mt-0.5">${h.brand_impersonation ? 'Detected' : 'None'}</span>
+        </div>
+        <div class="p-2 rounded-lg border flex flex-col justify-between ${h.homoglyph_or_typo ? 'bg-red-50 border-red-200 text-red-800 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700'}">
+          <span class="text-[11px] text-slate-500">Lookalike Domain</span>
+          <span class="text-xs mt-0.5">${h.homoglyph_or_typo ? 'Detected' : 'None'}</span>
+        </div>
+        <div class="p-2 rounded-lg border flex flex-col justify-between ${h.is_suspicious_tld ? 'bg-amber-50 border-amber-200 text-amber-800 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700'}">
+          <span class="text-[11px] text-slate-500">TLD Risk</span>
+          <span class="text-xs mt-0.5">${h.is_suspicious_tld ? 'Suspicious' : 'Normal'}</span>
+        </div>
+        <div class="p-2 rounded-lg border flex flex-col justify-between ${h.is_disposable_domain ? 'bg-red-50 border-red-200 text-red-800 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700'}">
+          <span class="text-[11px] text-slate-500">Mailbox Type</span>
+          <span class="text-xs mt-0.5">${h.is_disposable_domain ? 'Disposable' : 'Standard'}</span>
+        </div>
+      `;
+
+      document.getElementById('senderReasoningBox').innerText = data.reasoning || 'Sender evaluated.';
+    }
+
+    // EMAIL ANALYZER LOGIC
+    async function handleAnalyzeEmail() {
+      const emailText = document.getElementById('emailInput').value.trim();
+      const senderEmail = (document.getElementById('emailSenderInput').value || '').trim();
+
+      if (!emailText && !senderEmail) return;
+
+      const emptyState = document.getElementById('emailEmptyState');
+      const loadingState = document.getElementById('emailLoadingState');
+      const resultContainer = document.getElementById('emailResultContainer');
+
+      emptyState.classList.add('hidden');
+      resultContainer.classList.add('hidden');
+      loadingState.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            email_text: emailText,
+            sender_email: senderEmail 
+          })
+        });
+
+        const data = await res.json();
+        loadingState.classList.add('hidden');
+
+        if (data.error) {
+          emptyState.classList.remove('hidden');
+          return;
+        }
+
+        lastAnalysisReport = data;
+        renderEmailResults(data);
+        resultContainer.classList.remove('hidden');
+        lucide.createIcons();
+      } catch (err) {
+        console.error(err);
+        loadingState.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+      }
+    }
+
+    function renderEmailResults(data) {
+      const isPhish = data.classification === 'Phishing';
+      const isSuspicious = data.classification === 'Suspicious';
+
+      const banner = document.getElementById('emailVerdictBanner');
+      const iconBox = document.getElementById('verdictIconBox');
+      const icon = document.getElementById('verdictIcon');
+      const title = document.getElementById('verdictTitle');
+      const badge = document.getElementById('verdictRiskBadge');
+      const scoreNum = document.getElementById('verdictScoreNum');
+      const conf = document.getElementById('verdictConfidence');
+
+      conf.innerText = data.confidence_label || `${(data.probability * 100).toFixed(0)}%`;
+      scoreNum.innerText = `${Math.round(data.risk_score)}/100`;
+
+      if (isPhish) {
+        banner.className = 'border border-red-200 bg-red-50/60 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4';
+        iconBox.className = 'w-11 h-11 rounded-lg bg-red-600 text-white flex items-center justify-center text-lg font-bold';
+        icon.setAttribute('data-lucide', 'shield-alert');
+        title.innerText = 'PHISHING DETECTED';
+        title.className = 'text-base font-bold tracking-tight text-red-900';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded font-bold uppercase bg-red-100 text-red-700 border border-red-200';
+        badge.innerText = 'HIGH RISK';
+      } else if (isSuspicious) {
+        banner.className = 'border border-amber-200 bg-amber-50/60 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4';
+        iconBox.className = 'w-11 h-11 rounded-lg bg-amber-500 text-white flex items-center justify-center text-lg font-bold';
+        icon.setAttribute('data-lucide', 'alert-triangle');
+        title.innerText = 'SUSPICIOUS EMAIL';
+        title.className = 'text-base font-bold tracking-tight text-amber-900';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200';
+        badge.innerText = 'CAUTION';
+      } else {
+        banner.className = 'border border-blue-200 bg-blue-50/60 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4';
+        iconBox.className = 'w-11 h-11 rounded-lg bg-blue-600 text-white flex items-center justify-center text-lg font-bold';
+        icon.setAttribute('data-lucide', 'shield-check');
+        title.innerText = 'CLEAN & SAFE';
+        title.className = 'text-base font-bold tracking-tight text-blue-900';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200';
+        badge.innerText = 'SAFE';
+      }
+
+      // 1. Sender Analysis Box
+      const senderBox = document.getElementById('emailSenderResultBox');
+      const senderContent = document.getElementById('emailSenderContent');
+      if (data.sender_analysis && (data.sender_analysis.sender_email || data.sender_analysis.domain)) {
+        senderBox.classList.remove('hidden');
+        const sa = data.sender_analysis;
+        const sf = sa.features || {};
+        
+        let senderBadge = sf.brandImpersonationFound || sf.hasLookalike 
+          ? '<span class="text-[11px] px-2 py-0.5 rounded font-bold bg-red-100 text-red-700 border border-red-200">SPOOFED</span>'
+          : sf.isTrusted 
+            ? '<span class="text-[11px] px-2 py-0.5 rounded font-bold bg-blue-100 text-blue-700 border border-blue-200">VERIFIED</span>'
+            : '<span class="text-[11px] px-2 py-0.5 rounded font-medium bg-slate-100 text-slate-700 border border-slate-200">EXTERNAL</span>';
+
+        senderContent.innerHTML = `
+          <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+            <div class="flex items-center gap-2 truncate">
+              <span class="font-mono text-slate-800 font-medium truncate">${escapeHtml(sa.sender_email)}</span>
+              ${senderBadge}
+            </div>
+            <span class="font-semibold text-xs shrink-0 ${sa.risk_score >= 60 ? 'text-red-600' : 'text-blue-600'}">Threat: ${Math.round(sa.risk_score)}%</span>
+          </div>
+        `;
+      } else {
+        senderBox.classList.add('hidden');
+      }
+
+      // 2. Email Authentication Headers (SPF/DKIM/DMARC)
+      const headerBox = document.getElementById('emailHeaderResultBox');
+      const headerContent = document.getElementById('emailHeaderContent');
+      const headerAuthStatus = document.getElementById('headerAuthOverallStatus');
+      
+      if (data.header_analysis && data.header_analysis.hasAuthenticationResults) {
+        headerBox.classList.remove('hidden');
+        const ha = data.header_analysis;
+        
+        const renderBadge = (proto, val) => {
+          if (!val) return `<div class="p-2 bg-slate-50 border border-slate-200 rounded-lg"><span class="text-[10px] text-slate-400 font-bold block">${proto}</span><span class="font-mono text-slate-500 font-semibold">NONE</span></div>`;
+          const isPass = val.toLowerCase().includes('pass');
+          const isFail = val.toLowerCase().includes('fail');
+          const bg = isPass ? 'bg-blue-50 border-blue-200 text-blue-800' : isFail ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800';
+          return `<div class="p-2 rounded-lg border ${bg}"><span class="text-[10px] font-bold block opacity-75">${proto}</span><span class="font-mono font-bold uppercase">${escapeHtml(val)}</span></div>`;
+        };
+
+        headerContent.innerHTML = `
+          ${renderBadge('SPF Policy', ha.spf)}
+          ${renderBadge('DKIM Signature', ha.dkim)}
+          ${renderBadge('DMARC Alignment', ha.dmarc)}
+        `;
+
+        if (ha.spf === 'pass' && ha.dkim === 'pass' && ha.dmarc === 'pass') {
+          headerAuthStatus.innerText = 'All Cryptographic Checks Passed';
+          headerAuthStatus.className = 'text-[11px] font-semibold text-blue-600';
+        } else if (ha.spf === 'fail' || ha.dkim === 'fail' || ha.dmarc === 'fail') {
+          headerAuthStatus.innerText = 'Authentication Violations Detected';
+          headerAuthStatus.className = 'text-[11px] font-semibold text-red-600';
+        } else {
+          headerAuthStatus.innerText = 'Partial Authentication Records';
+          headerAuthStatus.className = 'text-[11px] font-medium text-slate-500';
+        }
+      } else {
+        headerBox.classList.add('hidden');
+      }
+
+      // 3. Embedded URLs Diagnostic
+      const urlsBox = document.getElementById('emailUrlsResultBox');
+      const urlsContent = document.getElementById('emailUrlsContent');
+      const urlsBadge = document.getElementById('emailUrlsCountBadge');
+
+      if (data.url_analysis && data.url_analysis.length > 0) {
+        urlsBox.classList.remove('hidden');
+        urlsBadge.innerText = `${data.url_analysis.length} link${data.url_analysis.length > 1 ? 's' : ''} found`;
+        urlsContent.innerHTML = '';
+
+        data.url_analysis.forEach(item => {
+          const uRisk = item.diagnostics?.threat_probability || 0;
+          const uClass = item.diagnostics?.classification || 'Legitimate';
+          const isBad = uClass === 'Phishing';
+          const isWarn = uClass === 'Suspicious';
+          const badgeClass = isBad ? 'bg-red-100 text-red-700 border-red-200' : isWarn ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+
+          const card = document.createElement('div');
+          card.className = `p-2.5 rounded-lg border flex flex-col gap-1 ${isBad ? 'bg-red-50/50 border-red-200' : isWarn ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50 border-slate-200'}`;
+          card.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono text-slate-800 font-medium truncate">${escapeHtml(item.url)}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase border shrink-0 ${badgeClass}">${uClass} (${Math.round(uRisk * 100)}%)</span>
+            </div>
+            ${item.diagnostics?.flags && item.diagnostics.flags.length > 0 ? `
+              <div class="text-[11px] text-slate-600 space-y-0.5 mt-0.5">
+                ${item.diagnostics.flags.map(f => `<div>&bull; ${escapeHtml(f)}</div>`).join('')}
+              </div>
+            ` : ''}
+          `;
+          urlsContent.appendChild(card);
+        });
+      } else {
+        urlsBox.classList.add('hidden');
+      }
+
+      // 4. Security Guidance
+      document.getElementById('emailReasoningBox').innerText = data.reasoning || 'Email evaluated through multi-signal engine.';
+
+      // 5. Detected Signals List (Explicit Evidence)
+      const signalsList = document.getElementById('emailDetectedSignalsList');
+      signalsList.innerHTML = '';
+      
+      const signals = data.detected_signals && data.detected_signals.length > 0 
+        ? data.detected_signals 
+        : ['Standard communication structure and verified metrics.'];
+
+      signals.forEach(sig => {
+        const div = document.createElement('div');
+        div.className = `p-2 rounded-lg border flex items-start gap-2 text-xs ${isPhish ? 'bg-red-50 border-red-100 text-red-900' : isSuspicious ? 'bg-amber-50 border-amber-100 text-amber-900' : 'bg-blue-50 border-blue-100 text-blue-900'}`;
+        div.innerHTML = `
+          <i data-lucide="${isPhish ? 'alert-circle' : isSuspicious ? 'alert-triangle' : 'check-circle-2'}" class="w-3.5 h-3.5 shrink-0 mt-0.5 ${isPhish ? 'text-red-600' : isSuspicious ? 'text-amber-600' : 'text-blue-600'}"></i>
+          <span class="leading-tight">${escapeHtml(sig)}</span>
+        `;
+        signalsList.appendChild(div);
+      });
+
+      renderShapPlot('shapPlotEmail', data.top_email_text_features);
+    }
+
+    function jumpToSenderVerifierFromEmail() {
+      const senderVal = document.getElementById('emailSenderInput').value.trim() || 
+        (lastAnalysisReport?.sender_analysis?.sender_email) || '';
+      
+      switchTab('sender');
+      if (senderVal) {
+        document.getElementById('senderInput').value = senderVal;
+        handleAnalyzeSender();
+      }
+    }
+
+    function renderShapPlot(containerId, topFeatures) {
+      if (!topFeatures || Object.keys(topFeatures).length === 0) {
+        document.getElementById(containerId).innerHTML = `
+          <div class="flex items-center justify-center h-full text-xs text-slate-400">
+            No distinct weights computed.
+          </div>
+        `;
+        return;
+      }
+
+      const entries = Object.entries(topFeatures);
+      const labels = entries.map(e => e[0].replace(/_/g, ' '));
+      const values = entries.map(e => Number(e[1]));
+      const colors = values.map(v => v > 0 ? '#EF4444' : '#3B82F6');
+
+      const trace = {
+        x: values,
+        y: labels,
+        type: 'bar',
+        orientation: 'h',
+        marker: {
+          color: colors
+        },
+        text: values.map(v => (v > 0 ? `+${v.toFixed(2)}` : `${v.toFixed(2)}`)),
+        textposition: 'auto',
+        hoverinfo: 'x+y'
+      };
+
+      const layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#334155', family: 'Inter, sans-serif', size: 11 },
+        margin: { l: 140, r: 20, t: 15, b: 30 },
+        xaxis: {
+          gridcolor: '#E2E8F0',
+          zerolinecolor: '#94A3B8',
+          tickfont: { size: 10, color: '#64748B' }
+        },
+        yaxis: {
+          autorange: 'reversed',
+          tickfont: { size: 11, color: '#334155' }
+        }
+      };
+
+      Plotly.newPlot(containerId, [trace], layout, { responsive: true, displayModeBar: false });
+    }
+
+    // URL SCANNER
+    async function handleScanUrl() {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) return;
+
+      const emptyState = document.getElementById('urlEmptyState');
+      const resultContainer = document.getElementById('urlResultContainer');
+      const btn = document.getElementById('btnScanUrl');
+
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/predict_url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: url })
+        });
+
+        const data = await res.json();
+        btn.disabled = false;
+
+        if (data.error) return;
+
+        renderUrlResults(url, data);
+        emptyState.classList.add('hidden');
+        resultContainer.classList.remove('hidden');
+        lucide.createIcons();
+      } catch (err) {
+        console.error(err);
+        btn.disabled = false;
+      }
+    }
+
+    function renderUrlResults(targetUrl, data) {
+      const isPhish = data.classification.includes('Phishing');
+      const banner = document.getElementById('urlVerdictBanner');
+      const iconBox = document.getElementById('urlVerdictIconBox');
+      const icon = document.getElementById('urlVerdictIcon');
+      const title = document.getElementById('urlVerdictTitle');
+      const badge = document.getElementById('urlVerdictBadge');
+      const score = document.getElementById('urlScoreNum');
+      const target = document.getElementById('urlScannedTarget');
+
+      target.innerText = targetUrl;
+      score.innerText = `${Math.round(data.risk_score)}%`;
+
+      if (isPhish) {
+        banner.className = 'border border-red-200 bg-red-50/50 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4';
+        iconBox.className = 'w-11 h-11 rounded-lg bg-red-600 text-white flex items-center justify-center text-lg font-bold';
+        icon.setAttribute('data-lucide', 'alert-octagon');
+        title.innerText = 'PHISHING WEBSITE DETECTED';
+        title.className = 'text-base font-bold tracking-tight text-red-900';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded font-bold uppercase bg-red-100 text-red-700 border border-red-200';
+        badge.innerText = 'FLAGGED';
+      } else {
+        banner.className = 'border border-blue-200 bg-blue-50/50 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4';
+        iconBox.className = 'w-11 h-11 rounded-lg bg-blue-600 text-white flex items-center justify-center text-lg font-bold';
+        icon.setAttribute('data-lucide', 'check-circle-2');
+        title.innerText = 'SAFE WEBSITE';
+        title.className = 'text-base font-bold tracking-tight text-blue-900';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded font-bold uppercase bg-blue-100 text-blue-700 border border-blue-200';
+        badge.innerText = 'SAFE';
+      }
+
+      const diagGrid = document.getElementById('urlDiagnosticsGrid');
+      diagGrid.innerHTML = `
+        <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 flex justify-between">
+          <span class="text-slate-500">Classification</span>
+          <span class="font-semibold ${isPhish ? 'text-red-600' : 'text-blue-600'}">${data.classification}</span>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 flex justify-between">
+          <span class="text-slate-500">Security Note</span>
+          <span class="text-slate-800">${data.reasoning || 'Checked.'}</span>
+        </div>
+      `;
+    }
+
+    // GMAIL INBOX SCANNER & OAUTH 2.0 INTEGRATION
+    const GOOGLE_CLIENT_ID = '436265178649-ol61us3poubkt7437s4413lop9qlb221.apps.googleusercontent.com';
+    const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email';
+
+    let googleTokenClient = null;
+    let userAccessToken = sessionStorage.getItem('google_gmail_token') || null;
+    let connectedUserEmail = sessionStorage.getItem('google_user_email') || null;
+
+    // Initialize GIS Client
+    function initGoogleAuth() {
+      if (window.google?.accounts?.oauth2) {
+        try {
+          googleTokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: GMAIL_SCOPES,
+            callback: async (tokenResponse) => {
+              if (tokenResponse.error) {
+                console.error('Google OAuth error:', tokenResponse);
+                alert('Authentication failed: ' + (tokenResponse.error_description || tokenResponse.error));
+                return;
+              }
+              if (tokenResponse.access_token) {
+                userAccessToken = tokenResponse.access_token;
+                sessionStorage.setItem('google_gmail_token', userAccessToken);
+                await refreshInboxData();
+              }
+            }
+          });
+        } catch (e) {
+          console.warn('GIS TokenClient init warning:', e);
+        }
+      } else {
+        setTimeout(initGoogleAuth, 200);
+      }
+    }
+
+    function handleGoogleSignIn() {
+      if (!googleTokenClient) {
+        initGoogleAuth();
+      }
+      if (googleTokenClient) {
+        googleTokenClient.requestAccessToken({ prompt: 'consent' });
+      } else {
+        alert('Google Identity Services is initializing. Please try again in a moment.');
+      }
+    }
+
+    function handleGoogleSignOut() {
+      if (userAccessToken && window.google?.accounts?.oauth2) {
+        google.accounts.oauth2.revoke(userAccessToken, () => {});
+      }
+      userAccessToken = null;
+      connectedUserEmail = null;
+      sessionStorage.removeItem('google_gmail_token');
+      sessionStorage.removeItem('google_user_email');
+      updateAuthUI(false, null);
+      fetchInboxData();
+    }
+
+    function updateAuthUI(isLive, userEmail) {
+      const banner = document.getElementById('gmailAuthBanner');
+      const title = document.getElementById('gmailAuthTitle');
+      const badge = document.getElementById('gmailAuthBadge');
+      const desc = document.getElementById('gmailAuthDesc');
+      const btnConnect = document.getElementById('btnConnectGoogle');
+      const btnDisconnect = document.getElementById('btnDisconnectGoogle');
+      const sourceBadge = document.getElementById('inboxSourceBadge');
+      const subheader = document.getElementById('inboxSubheader');
+
+      if (isLive || userAccessToken) {
+        const emailLabel = userEmail || connectedUserEmail || 'Your Gmail Account';
+        if (banner) banner.className = 'p-4 rounded-xl border border-emerald-200 bg-emerald-50/70 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        if (title) title.innerText = 'Connected: ' + emailLabel;
+        if (badge) {
+          badge.className = 'text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Live Gmail Active';
+        }
+        if (desc) desc.innerText = 'Real-time threat evaluation & multi-signal security verification active on your live Gmail inbox.';
+        if (btnConnect) btnConnect.classList.add('hidden');
+        if (btnDisconnect) btnDisconnect.classList.remove('hidden');
+        if (sourceBadge) {
+          sourceBadge.className = 'text-[10px] px-2 py-0.5 rounded-md font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200';
+          sourceBadge.innerText = 'Live Gmail: ' + emailLabel;
+        }
+        if (subheader) subheader.innerText = 'Scanning live incoming messages from ' + emailLabel + ' with real-time detection.';
+      } else {
+        if (banner) banner.className = 'p-4 rounded-xl border border-blue-200 bg-blue-50/70 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        if (title) title.innerText = 'Connect Your Gmail Account';
+        if (badge) {
+          badge.className = 'text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-800';
+          badge.innerText = 'OAuth 2.0 Ready';
+        }
+        if (desc) desc.innerText = 'Authorize read-only access to scan your real incoming Gmail inbox for phishing threats & fraudulent vectors.';
+        if (btnConnect) btnConnect.classList.remove('hidden');
+        if (btnDisconnect) btnDisconnect.classList.add('hidden');
+        if (sourceBadge) {
+          sourceBadge.className = 'text-[10px] px-2 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-600 border border-slate-200';
+          sourceBadge.innerText = 'Demo Sandbox';
+        }
+        if (subheader) subheader.innerText = 'Live multi-signal threat evaluation & cryptographic header verification.';
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function fetchInboxData() {
+      try {
+        const headers = {};
+        if (userAccessToken) {
+          headers['Authorization'] = `Bearer ${userAccessToken}`;
+        }
+
+        const res = await fetch('/api/inbox', { headers });
+        
+        if (res.status === 401) {
+          userAccessToken = null;
+          connectedUserEmail = null;
+          sessionStorage.removeItem('google_gmail_token');
+          sessionStorage.removeItem('google_user_email');
+          updateAuthUI(false, null);
+          // Retry unauthenticated
+          const fallbackRes = await fetch('/api/inbox');
+          const fallbackData = await fallbackRes.json();
+          inboxEmails = fallbackData.emails || [];
+          updateInboxStats(fallbackData.stats);
+          filterInboxItems();
+          return;
+        }
+
+        const data = await res.json();
+        if (data.userEmail) {
+          connectedUserEmail = data.userEmail;
+          sessionStorage.setItem('google_user_email', data.userEmail);
+        }
+
+        updateAuthUI(data.isLiveGmail, data.userEmail || connectedUserEmail);
+
+        if (data.emails) {
+          inboxEmails = data.emails;
+          updateInboxStats(data.stats);
+          filterInboxItems();
+        }
+      } catch (err) {
+        console.error('Failed to fetch inbox:', err);
+      }
+    }
+
+    async function refreshInboxData() {
+      const btn = document.getElementById('btnRescanInbox');
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Scanning...</span>`;
+        if (window.lucide) lucide.createIcons();
+      }
+
+      // Show temporary scanning overlay / indicator in the list
+      const container = document.getElementById('inboxListContainer');
+      if (container) {
+        container.innerHTML = `
+          <div class="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 space-y-2">
+            <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 animate-spin">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </div>
+            <p class="text-xs font-semibold text-slate-700">${userAccessToken ? 'Scanning live Gmail messages...' : 'Re-evaluating inbox threat signals...'}</p>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+      }
+
+      // Small delay for smooth visual feedback
+      await new Promise(r => setTimeout(r, 400));
+      await fetchInboxData();
+
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-green-300"></i><span>Scan Complete</span>`;
+        if (window.lucide) lucide.createIcons();
+        setTimeout(() => {
+          btn.innerHTML = originalHtml;
+          if (window.lucide) lucide.createIcons();
+        }, 1500);
+      }
+    }
+
+    function updateInboxStats(stats) {
+      if (!stats) return;
+      document.getElementById('statTotalInbox').innerText = stats.total ?? inboxEmails.length;
+      document.getElementById('statPhishInbox').innerText = stats.phishing ?? 0;
+      document.getElementById('statSuspiciousInbox').innerText = stats.suspicious ?? 0;
+      document.getElementById('statLegitInbox').innerText = stats.legitimate ?? 0;
+    }
+
+    let activeFilter = 'all';
+
+    function setInboxFilter(filter) {
+      activeFilter = filter;
+      document.querySelectorAll('.inbox-filter-btn').forEach(b => {
+        if (b.dataset.filter === filter) {
+          b.className = 'inbox-filter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white transition whitespace-nowrap';
+        } else {
+          b.className = 'inbox-filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition whitespace-nowrap';
+        }
+      });
+      filterInboxItems();
+    }
+
+    function filterInboxItems() {
+      const query = (document.getElementById('inboxSearchInput').value || '').toLowerCase();
+      
+      const filtered = inboxEmails.filter(email => {
+        const catMatch = 
+          activeFilter === 'all' ||
+          (activeFilter === 'phishing' && email.classification === 'Phishing') ||
+          (activeFilter === 'suspicious' && email.classification === 'Suspicious') ||
+          (activeFilter === 'legitimate' && email.classification === 'Legitimate');
+
+        if (!catMatch) return false;
+        if (!query) return true;
+        const text = `${email.from} ${email.senderName} ${email.subject} ${email.snippet} ${email.body}`.toLowerCase();
+        return text.includes(query);
+      });
+
+      renderInboxList(filtered);
+    }
+
+    function renderInboxList(emails) {
+      const container = document.getElementById('inboxListContainer');
+      container.innerHTML = '';
+
+      if (emails.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 space-y-1">
+            <p class="text-xs font-semibold text-slate-700">No emails match the filter.</p>
+          </div>
+        `;
+        return;
+      }
+
+      emails.forEach(email => {
+        const isPhish = email.classification === 'Phishing';
+        const isSuspicious = email.classification === 'Suspicious';
+
+        let badgeBg = 'bg-blue-50 text-blue-700 border-blue-200';
+        let badgeLabel = 'Safe';
+
+        if (isPhish) {
+          badgeBg = 'bg-red-50 text-red-700 border-red-200';
+          badgeLabel = 'Phishing';
+        } else if (isSuspicious) {
+          badgeBg = 'bg-amber-50 text-amber-800 border-amber-200';
+          badgeLabel = 'Suspicious';
+        }
+
+        const card = document.createElement('div');
+        card.className = 'bg-white p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 transition cursor-pointer shadow-xs space-y-2';
+        card.onclick = () => openEmailModal(email);
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="font-semibold text-xs text-slate-900 truncate">${escapeHtml(email.senderName || email.from)}</span>
+              <span class="text-[11px] text-slate-400 font-mono hidden sm:inline truncate">${escapeHtml(email.from)}</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-[11px] px-2 py-0.5 rounded font-medium border ${badgeBg}">
+                ${badgeLabel} (${Math.round(email.risk_score)}%)
+              </span>
+              <span class="text-[11px] text-slate-400">${email.date}</span>
+            </div>
+          </div>
+          <div class="text-xs font-medium text-slate-800 truncate">${escapeHtml(email.subject)}</div>
+          <p class="text-[11px] text-slate-500 line-clamp-1">${escapeHtml(email.snippet)}</p>
+        `;
+
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function openEmailModal(email) {
+      currentModalEmail = email;
+      const modal = document.getElementById('emailDetailModal');
+      const badge = document.getElementById('modalVerdictBadge');
+      const riskScore = document.getElementById('modalRiskScore');
+      const from = document.getElementById('modalFrom');
+      const subject = document.getElementById('modalSubject');
+      const date = document.getElementById('modalDate');
+      const body = document.getElementById('modalBodyText');
+      const signalsList = document.getElementById('modalSignalsList');
+
+      riskScore.innerText = `${Math.round(email.risk_score)}%`;
+      from.innerText = `${email.senderName} <${email.from}>`;
+      subject.innerText = email.subject;
+      date.innerText = email.date;
+      body.innerText = email.body || email.snippet;
+
+      if (email.classification === 'Phishing') {
+        badge.className = 'px-2.5 py-0.5 rounded text-xs font-bold uppercase text-white bg-red-600';
+        badge.innerText = 'PHISHING';
+      } else if (email.classification === 'Suspicious') {
+        badge.className = 'px-2.5 py-0.5 rounded text-xs font-bold uppercase text-white bg-amber-500';
+        badge.innerText = 'SUSPICIOUS';
+      } else {
+        badge.className = 'px-2.5 py-0.5 rounded text-xs font-bold uppercase text-white bg-blue-600';
+        badge.innerText = 'SAFE';
+      }
+
+      signalsList.innerHTML = '';
+      const detected = email.detected_features || ['Standard email metrics.'];
+      detected.forEach(sig => {
+        const d = document.createElement('div');
+        d.className = 'p-1.5 rounded bg-slate-50 border border-slate-200 text-slate-700 flex items-center gap-2';
+        d.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${email.classification === 'Phishing' ? 'bg-red-500' : 'bg-blue-500'}"></span><span>${escapeHtml(sig)}</span>`;
+        signalsList.appendChild(d);
+      });
+
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeEmailModal() {
+      document.getElementById('emailDetailModal').classList.add('hidden');
+    }
+
+    function loadModalEmailIntoAnalyzer() {
+      if (currentModalEmail) {
+        closeEmailModal();
+        switchTab('email');
+        const emailInput = document.getElementById('emailInput');
+        const senderInput = document.getElementById('emailSenderInput');
+        if (senderInput) {
+          senderInput.value = `"${currentModalEmail.senderName}" <${currentModalEmail.from}>`;
+        }
+        emailInput.value = `From: "${currentModalEmail.senderName}" <${currentModalEmail.from}>\nSubject: ${currentModalEmail.subject}\n\n${currentModalEmail.body || currentModalEmail.snippet}`;
+        emailInput.dispatchEvent(new Event('input'));
+        handleAnalyzeEmail();
+      }
+    }
+
+    function openAddEmailModal() {
+      document.getElementById('addEmailModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeAddEmailModal() {
+      document.getElementById('addEmailModal').classList.add('hidden');
+    }
+
+    async function submitNewCustomEmail() {
+      const from = document.getElementById('newEmailFrom').value.trim();
+      const subject = document.getElementById('newEmailSubject').value.trim();
+      const body = document.getElementById('newEmailBody').value.trim();
+
+      if (!subject && !body) return;
+
+      try {
+        const res = await fetch('/api/inbox/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from, senderName: from, subject, body })
+        });
+
+        const data = await res.json();
+        if (data.email) {
+          inboxEmails.unshift(data.email);
+          closeAddEmailModal();
+          const stats = {
+            total: inboxEmails.length,
+            phishing: inboxEmails.filter(e => e.classification === 'Phishing').length,
+            suspicious: inboxEmails.filter(e => e.classification === 'Suspicious').length,
+            legitimate: inboxEmails.filter(e => e.classification === 'Legitimate').length
+          };
+          updateInboxStats(stats);
+          filterInboxItems();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function exportFullAuditReport() {
+      const report = {
+        generated_at: new Date().toISOString(),
+        platform: "PhishGuard",
+        inbox_summary: {
+          total_emails: inboxEmails.length,
+          phishing_count: inboxEmails.filter(e => e.classification === 'Phishing').length,
+          suspicious_count: inboxEmails.filter(e => e.classification === 'Suspicious').length,
+          safe_count: inboxEmails.filter(e => e.classification === 'Legitimate').length
+        },
+        latest_single_analysis: lastAnalysisReport,
+        latest_sender_analysis: lastSenderAnalysisReport
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(report, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `phishguard_report_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+  </script>
+</body>
+</html>
