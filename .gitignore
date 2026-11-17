@@ -1,0 +1,44 @@
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Gmail OAuth Credentials
+credentials.json
+token.json
+
+# Dependencies
+node_modules/
+
+# Datasets
+dataset/
+
+# Generated Predictions
+results/predictions/
+
+# Python Model Cache
+*.joblib.tmp
+
+# Build Files
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE Files
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db

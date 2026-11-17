@@ -1,0 +1,89 @@
+{
+  "status": "completed",
+  "model": "roberta",
+  "dataset": "ceas_08",
+  "generated_at": "2026-10-31T10:18:17.891956+00:00",
+  "positive_label": "phishing",
+  "decision_threshold": 0.5,
+  "confusion_matrix_label_order": [
+    "legitimate",
+    "phishing"
+  ],
+  "seed": 42,
+  "device": "cpu",
+  "hyperparameters": {
+    "checkpoint": "FacebookAI/roberta-base",
+    "resolved_revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b",
+    "learning_rate": 2e-05,
+    "batch_size": 16,
+    "max_length": 128,
+    "class_weighting": "balanced"
+  },
+  "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+  "model_config": {
+    "bert_checkpoint": null,
+    "roberta_checkpoint": "FacebookAI/roberta-base",
+    "max_length": 128,
+    "epochs_requested": 1,
+    "best_epoch": 1
+  },
+  "dataset_rows": 1000,
+  "class_counts": {
+    "legitimate": 500,
+    "phishing": 500
+  },
+  "splits": {
+    "train": {
+      "rows": 600,
+      "groups": 600,
+      "class_counts": {
+        "legitimate": 300,
+        "phishing": 300
+      }
+    },
+    "validation": {
+      "rows": 200,
+      "groups": 200,
+      "class_counts": {
+        "legitimate": 100,
+        "phishing": 100
+      }
+    },
+    "test": {
+      "rows": 200,
+      "groups": 200,
+      "class_counts": {
+        "legitimate": 100,
+        "phishing": 100
+      }
+    }
+  },
+  "phishtank_negative_sampling": null,
+  "metrics": {
+    "accuracy": 0.975,
+    "precision": 1.0,
+    "recall": 0.95,
+    "f1": 0.9743589743589743,
+    "log_loss": 0.08821305808570777,
+    "confusion_matrix": [
+      [
+        100,
+        0
+      ],
+      [
+        5,
+        95
+      ]
+    ]
+  },
+  "training_curve": [
+    {
+      "epoch": 1,
+      "training_loss": 0.296775398136427,
+      "training_accuracy": 0.85,
+      "validation_loss": 0.16271801594644786,
+      "validation_accuracy": 0.95
+    }
+  ],
+  "elapsed_seconds": 1074.375
+}

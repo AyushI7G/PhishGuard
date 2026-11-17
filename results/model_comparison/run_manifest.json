@@ -1,0 +1,466 @@
+{
+  "status": "completed",
+  "started_at": "2026-10-31T09:39:32.631288+00:00",
+  "seed": 42,
+  "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+  "models": [
+    "xgboost",
+    "bert",
+    "roberta",
+    "cnn",
+    "lstm"
+  ],
+  "datasets": [
+    "ceas_08",
+    "urldata",
+    "phishtank"
+  ],
+  "max_rows_per_dataset": 1000,
+  "row_cap_policy": "Deterministic class-balanced random sampling using the run seed.",
+  "requested_combinations": 15,
+  "split_method": "StratifiedGroupKFold: 5 folds for 20% test, then 4 folds on the remaining 80% for 60% train / 20% validation / 20% test.",
+  "metric_definition": {
+    "positive_class": "phishing",
+    "decision_threshold": 0.5,
+    "confusion_matrix_order": [
+      "legitimate",
+      "phishing"
+    ],
+    "test_loss": "Unweighted binary log loss."
+  },
+  "grouping": {
+    "ceas_08": "SHA-256 of normalized sender, subject, and body",
+    "urldata": "URL hostname",
+    "phishtank": "URL hostname across PhishTank positives and urldata negatives"
+  },
+  "phishtank_negative_policy": {
+    "positive_source": "dataset_phishtank.csv",
+    "positive_filter": "verified=yes and online=yes",
+    "negative_source": "urldata.csv rows labelled good",
+    "phishing_hosts_excluded_from_negative_pool": 55977,
+    "positive_rows": 59840,
+    "negative_rows": 344658,
+    "negative_policy": "All distinct urldata good URLs whose hostname is not present in the PhishTank positive feed; URLs sharing a host are kept in the same split."
+  },
+  "row_counts_before_optional_cap": {
+    "ceas_08": {
+      "legitimate": 17312,
+      "phishing": 21842
+    },
+    "urldata": {
+      "legitimate": 344821,
+      "phishing": 75640
+    },
+    "phishtank": {
+      "legitimate": 344658,
+      "phishing": 59840
+    }
+  },
+  "dataset_sha256": {
+    "ceas_08": "22375e7d5f5a8229dbe987914ee9b3705656c590038662a7df6054629b376074",
+    "urldata": "3243f054f5205e352f7a9adc2d7b993d516acd4ad17cb032b91c989138e34808",
+    "phishtank": "f9c6b90044b583bf961be4419b27f11b424e73ed2e003e1ae2e862a61c1fea58"
+  },
+  "benchmark_script_sha256": "55123bd4b69355e8ccded101f3af27b1371a3a0ecc49252802e09048467ce335",
+  "dependency_versions": {
+    "numpy": "2.5.4",
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1",
+    "torch": "2.15.0",
+    "transformers": "4.57.6"
+  },
+  "parameters": {
+    "models": [
+      "xgboost",
+      "bert",
+      "roberta",
+      "cnn",
+      "lstm"
+    ],
+    "datasets": [
+      "ceas_08",
+      "urldata",
+      "phishtank"
+    ],
+    "seed": 42,
+    "epochs": 1,
+    "patience": 1,
+    "max_rows": 1000,
+    "max_length": 128,
+    "vocab_size": 50000,
+    "max_features": 100000,
+    "bert_model": "google-bert/bert-base-uncased",
+    "roberta_model": "FacebookAI/roberta-base",
+    "bert_revision": null,
+    "roberta_revision": null,
+    "batch_size": 128,
+    "transformer_batch_size": 16,
+    "learning_rate": 0.001,
+    "transformer_learning_rate": 2e-05,
+    "xgb_estimators": 500,
+    "threads": 11,
+    "cpu": true,
+    "output_dir": "E:\\Downloads\\Phishguard\\results\\model_comparison"
+  },
+  "results": [
+    {
+      "model": "xgboost",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "result_file": "ceas_08__xgboost.json",
+      "metrics": {
+        "accuracy": 0.955,
+        "precision": 0.9504950495049505,
+        "recall": 0.96,
+        "f1": 0.9552238805970149,
+        "log_loss": 0.14446793124073054,
+        "confusion_matrix": [
+          [
+            95,
+            5
+          ],
+          [
+            4,
+            96
+          ]
+        ]
+      }
+    },
+    {
+      "model": "bert",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "result_file": "ceas_08__bert.json",
+      "metrics": {
+        "accuracy": 0.98,
+        "precision": 0.9897959183673469,
+        "recall": 0.97,
+        "f1": 0.9797979797979798,
+        "log_loss": 0.08401705371966123,
+        "confusion_matrix": [
+          [
+            99,
+            1
+          ],
+          [
+            3,
+            97
+          ]
+        ]
+      }
+    },
+    {
+      "model": "roberta",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "result_file": "ceas_08__roberta.json",
+      "metrics": {
+        "accuracy": 0.975,
+        "precision": 1.0,
+        "recall": 0.95,
+        "f1": 0.9743589743589743,
+        "log_loss": 0.08821305808570777,
+        "confusion_matrix": [
+          [
+            100,
+            0
+          ],
+          [
+            5,
+            95
+          ]
+        ]
+      }
+    },
+    {
+      "model": "cnn",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "result_file": "ceas_08__cnn.json",
+      "metrics": {
+        "accuracy": 0.925,
+        "precision": 0.9292929292929293,
+        "recall": 0.92,
+        "f1": 0.9246231155778895,
+        "log_loss": 0.3995050936333969,
+        "confusion_matrix": [
+          [
+            93,
+            7
+          ],
+          [
+            8,
+            92
+          ]
+        ]
+      }
+    },
+    {
+      "model": "lstm",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "result_file": "ceas_08__lstm.json",
+      "metrics": {
+        "accuracy": 0.725,
+        "precision": 0.6490066225165563,
+        "recall": 0.98,
+        "f1": 0.7808764940239044,
+        "log_loss": 0.5881624555162495,
+        "confusion_matrix": [
+          [
+            47,
+            53
+          ],
+          [
+            2,
+            98
+          ]
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "dataset": "urldata",
+      "status": "completed",
+      "result_file": "urldata__xgboost.json",
+      "metrics": {
+        "accuracy": 0.685,
+        "precision": 0.6608695652173913,
+        "recall": 0.76,
+        "f1": 0.7069767441860465,
+        "log_loss": 0.5094381018103574,
+        "confusion_matrix": [
+          [
+            61,
+            39
+          ],
+          [
+            24,
+            76
+          ]
+        ]
+      }
+    },
+    {
+      "model": "bert",
+      "dataset": "urldata",
+      "status": "completed",
+      "result_file": "urldata__bert.json",
+      "metrics": {
+        "accuracy": 0.85,
+        "precision": 0.8240740740740741,
+        "recall": 0.89,
+        "f1": 0.8557692307692307,
+        "log_loss": 0.3628760840767604,
+        "confusion_matrix": [
+          [
+            81,
+            19
+          ],
+          [
+            11,
+            89
+          ]
+        ]
+      }
+    },
+    {
+      "model": "roberta",
+      "dataset": "urldata",
+      "status": "completed",
+      "result_file": "urldata__roberta.json",
+      "metrics": {
+        "accuracy": 0.88,
+        "precision": 0.8584905660377359,
+        "recall": 0.91,
+        "f1": 0.883495145631068,
+        "log_loss": 0.33001310132094447,
+        "confusion_matrix": [
+          [
+            85,
+            15
+          ],
+          [
+            9,
+            91
+          ]
+        ]
+      }
+    },
+    {
+      "model": "cnn",
+      "dataset": "urldata",
+      "status": "completed",
+      "result_file": "urldata__cnn.json",
+      "metrics": {
+        "accuracy": 0.65,
+        "precision": 0.6041666666666666,
+        "recall": 0.87,
+        "f1": 0.7131147540983607,
+        "log_loss": 0.6580315260460042,
+        "confusion_matrix": [
+          [
+            43,
+            57
+          ],
+          [
+            13,
+            87
+          ]
+        ]
+      }
+    },
+    {
+      "model": "lstm",
+      "dataset": "urldata",
+      "status": "completed",
+      "result_file": "urldata__lstm.json",
+      "metrics": {
+        "accuracy": 0.635,
+        "precision": 0.608,
+        "recall": 0.76,
+        "f1": 0.6755555555555556,
+        "log_loss": 0.6575560507056741,
+        "confusion_matrix": [
+          [
+            51,
+            49
+          ],
+          [
+            24,
+            76
+          ]
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "dataset": "phishtank",
+      "status": "completed",
+      "result_file": "phishtank__xgboost.json",
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "log_loss": 0.011934055405744659,
+        "confusion_matrix": [
+          [
+            100,
+            0
+          ],
+          [
+            0,
+            100
+          ]
+        ]
+      }
+    },
+    {
+      "model": "bert",
+      "dataset": "phishtank",
+      "status": "completed",
+      "result_file": "phishtank__bert.json",
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "log_loss": 0.010593673438536129,
+        "confusion_matrix": [
+          [
+            100,
+            0
+          ],
+          [
+            0,
+            100
+          ]
+        ]
+      }
+    },
+    {
+      "model": "cnn",
+      "dataset": "phishtank",
+      "status": "completed",
+      "result_file": "phishtank__cnn.json",
+      "metrics": {
+        "accuracy": 0.99,
+        "precision": 1.0,
+        "recall": 0.98,
+        "f1": 0.98989898989899,
+        "log_loss": 0.15464336036995477,
+        "confusion_matrix": [
+          [
+            100,
+            0
+          ],
+          [
+            2,
+            98
+          ]
+        ]
+      }
+    },
+    {
+      "model": "lstm",
+      "dataset": "phishtank",
+      "status": "completed",
+      "result_file": "phishtank__lstm.json",
+      "metrics": {
+        "accuracy": 0.995,
+        "precision": 0.9900990099009901,
+        "recall": 1.0,
+        "f1": 0.9950248756218906,
+        "log_loss": 0.4176184009632092,
+        "confusion_matrix": [
+          [
+            99,
+            1
+          ],
+          [
+            0,
+            100
+          ]
+        ]
+      }
+    },
+    {
+      "model": "roberta",
+      "dataset": "phishtank",
+      "status": "completed",
+      "result_file": "phishtank__roberta.json",
+      "metrics": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "log_loss": 0.0025689541696545166,
+        "confusion_matrix": [
+          [
+            100,
+            0
+          ],
+          [
+            0,
+            100
+          ]
+        ]
+      }
+    }
+  ],
+  "row_counts_after_cap": {
+    "ceas_08": 1000,
+    "urldata": 1000,
+    "phishtank": 1000
+  },
+  "resume_events": [
+    {
+      "resumed_at": "2026-10-31T10:53:43.457644+00:00",
+      "script_sha256": "1e576ddbca79385f55b2be06c6604c4ef4761dd2f5f5e4883c7388da3f75bee0"
+    }
+  ],
+  "finished_at": "2026-10-31T11:27:22.241960+00:00",
+  "completed_combinations": 15,
+  "failed_combinations": 0
+}

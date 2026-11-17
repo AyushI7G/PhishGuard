@@ -1,0 +1,89 @@
+{
+  "status": "completed",
+  "model": "bert",
+  "dataset": "urldata",
+  "generated_at": "2026-10-31T10:28:59.208680+00:00",
+  "positive_label": "phishing",
+  "decision_threshold": 0.5,
+  "confusion_matrix_label_order": [
+    "legitimate",
+    "phishing"
+  ],
+  "seed": 42,
+  "device": "cpu",
+  "hyperparameters": {
+    "checkpoint": "google-bert/bert-base-uncased",
+    "resolved_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+    "learning_rate": 2e-05,
+    "batch_size": 16,
+    "max_length": 128,
+    "class_weighting": "balanced"
+  },
+  "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+  "model_config": {
+    "bert_checkpoint": "google-bert/bert-base-uncased",
+    "roberta_checkpoint": null,
+    "max_length": 128,
+    "epochs_requested": 1,
+    "best_epoch": 1
+  },
+  "dataset_rows": 1000,
+  "class_counts": {
+    "legitimate": 500,
+    "phishing": 500
+  },
+  "splits": {
+    "train": {
+      "rows": 600,
+      "groups": 526,
+      "class_counts": {
+        "legitimate": 300,
+        "phishing": 300
+      }
+    },
+    "validation": {
+      "rows": 200,
+      "groups": 176,
+      "class_counts": {
+        "legitimate": 100,
+        "phishing": 100
+      }
+    },
+    "test": {
+      "rows": 200,
+      "groups": 171,
+      "class_counts": {
+        "legitimate": 100,
+        "phishing": 100
+      }
+    }
+  },
+  "phishtank_negative_sampling": null,
+  "metrics": {
+    "accuracy": 0.85,
+    "precision": 0.8240740740740741,
+    "recall": 0.89,
+    "f1": 0.8557692307692307,
+    "log_loss": 0.3628760840767604,
+    "confusion_matrix": [
+      [
+        81,
+        19
+      ],
+      [
+        11,
+        89
+      ]
+    ]
+  },
+  "training_curve": [
+    {
+      "epoch": 1,
+      "training_loss": 0.5329427087306976,
+      "training_accuracy": 0.75,
+      "validation_loss": 0.319271023273468,
+      "validation_accuracy": 0.89
+    }
+  ],
+  "elapsed_seconds": 625.6410000000033
+}

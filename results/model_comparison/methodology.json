@@ -1,0 +1,1149 @@
+{
+  "schema_version": 1,
+  "generated_by": "ml/export_methodology.py",
+  "generated_by_sha256": "2889fe593f8134721293834b0c4c12b6d19ccb593276905263016304cb1ce0b9",
+  "source_manifest": "run_manifest.json",
+  "source_benchmark_script_sha256": "55123bd4b69355e8ccded101f3af27b1371a3a0ecc49252802e09048467ce335",
+  "seed": 42,
+  "max_rows_per_dataset": 1000,
+  "row_cap_policy": "Deterministic class-balanced random sampling using the run seed.",
+  "split_method": "StratifiedGroupKFold: 5 folds for 20% test, then 4 folds on the remaining 80% for 60% train / 20% validation / 20% test.",
+  "grouping": {
+    "ceas_08": "SHA-256 of normalized sender, subject, and body",
+    "urldata": "URL hostname",
+    "phishtank": "URL hostname across PhishTank positives and urldata negatives"
+  },
+  "row_counts_before_optional_cap": {
+    "ceas_08": {
+      "legitimate": 17312,
+      "phishing": 21842
+    },
+    "urldata": {
+      "legitimate": 344821,
+      "phishing": 75640
+    },
+    "phishtank": {
+      "legitimate": 344658,
+      "phishing": 59840
+    }
+  },
+  "dataset_sha256": {
+    "ceas_08": "22375e7d5f5a8229dbe987914ee9b3705656c590038662a7df6054629b376074",
+    "urldata": "3243f054f5205e352f7a9adc2d7b993d516acd4ad17cb032b91c989138e34808",
+    "phishtank": "f9c6b90044b583bf961be4419b27f11b424e73ed2e003e1ae2e862a61c1fea58"
+  },
+  "run_parameters": {
+    "models": [
+      "xgboost",
+      "bert",
+      "roberta",
+      "cnn",
+      "lstm"
+    ],
+    "datasets": [
+      "ceas_08",
+      "urldata",
+      "phishtank"
+    ],
+    "seed": 42,
+    "epochs": 1,
+    "patience": 1,
+    "max_rows": 1000,
+    "max_length": 128,
+    "vocab_size": 50000,
+    "max_features": 100000,
+    "bert_model": "google-bert/bert-base-uncased",
+    "roberta_model": "FacebookAI/roberta-base",
+    "bert_revision": null,
+    "roberta_revision": null,
+    "batch_size": 128,
+    "transformer_batch_size": 16,
+    "learning_rate": 0.001,
+    "transformer_learning_rate": 2e-05,
+    "xgb_estimators": 500,
+    "threads": 11,
+    "cpu": true,
+    "output_dir": "E:\\Downloads\\Phishguard\\results\\model_comparison"
+  },
+  "dataset_preprocessing": {
+    "ceas_08": {
+      "records": "Rows with labels 0 or 1; input text concatenates sender, subject, body, and URLs when present.",
+      "groups": "SHA-256 of lowercased sender, subject, and body after whitespace normalization."
+    },
+    "urldata": {
+      "records": "Non-empty URLs labelled good (0) or bad (1); input is the URL.",
+      "groups": "Normalized URL hostname."
+    },
+    "phishtank": {
+      "records": "Verified=yes and online=yes PhishTank URLs are positive; distinct URLData good URLs on hosts absent from the positive feed are negative. Input is the URL.",
+      "groups": "Normalized URL hostname across PhishTank positives and URLData negatives."
+    }
+  },
+  "leakage_controls": [
+    "A deterministic class-balanced row cap is applied before splitting when configured.",
+    "StratifiedGroupKFold creates a 20% test split first, then a 25% validation split of the remaining 80%; requested proportions are 60% train / 20% validation / 20% test, while recorded row counts are authoritative.",
+    "The benchmark checks that no group occurs in more than one split.",
+    "TF-IDF and the CNN/LSTM vocabulary are fitted on training text only; validation and test text are transformed using those training-fitted features.",
+    "Class weights are computed from training labels only. Validation loss is used for early stopping/checkpoint selection; the held-out test split is used for final metrics.",
+    "The report cannot establish that external pretrained-transformer pretraining corpora are disjoint from these datasets."
+  ],
+  "runs": [
+    {
+      "model": "xgboost",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 600,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "Not applicable (gradient-boosted trees)",
+        "learning_rate": 0.08,
+        "batch_size": null,
+        "loss": "binary:logistic objective; validation logloss is monitored for early stopping (error and logloss are evaluated).",
+        "epochs_requested": null,
+        "epochs_completed": null,
+        "max_boosting_rounds": 500,
+        "recorded_boosting_rounds": 38,
+        "best_validation_round": 37,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation logloss",
+        "gradient_clip_norm": null,
+        "other_parameters": {
+          "max_features": 100000,
+          "ngram_range": [
+            1,
+            2
+          ],
+          "min_df": 2,
+          "max_depth": 6,
+          "scale_pos_weight": 1.0,
+          "threads": 11
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "bert",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 600,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 2e-05,
+        "batch_size": 16,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "checkpoint": "google-bert/bert-base-uncased",
+          "resolved_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "roberta",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 600,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 2e-05,
+        "batch_size": 16,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "checkpoint": "FacebookAI/roberta-base",
+          "resolved_revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b",
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "cnn",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 600,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "embedding_dim": 96,
+          "vocab_size_limit": 50000,
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "lstm",
+      "dataset": "ceas_08",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 600,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 200,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "embedding_dim": 96,
+          "vocab_size_limit": 50000,
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "xgboost",
+      "dataset": "urldata",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 526,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 176,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 171,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "Not applicable (gradient-boosted trees)",
+        "learning_rate": 0.08,
+        "batch_size": null,
+        "loss": "binary:logistic objective; validation logloss is monitored for early stopping (error and logloss are evaluated).",
+        "epochs_requested": null,
+        "epochs_completed": null,
+        "max_boosting_rounds": 500,
+        "recorded_boosting_rounds": 54,
+        "best_validation_round": 53,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation logloss",
+        "gradient_clip_norm": null,
+        "other_parameters": {
+          "max_features": 100000,
+          "ngram_range": [
+            1,
+            2
+          ],
+          "min_df": 2,
+          "max_depth": 6,
+          "scale_pos_weight": 1.0,
+          "threads": 11
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "bert",
+      "dataset": "urldata",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 526,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 176,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 171,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 2e-05,
+        "batch_size": 16,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "checkpoint": "google-bert/bert-base-uncased",
+          "resolved_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "roberta",
+      "dataset": "urldata",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 526,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 176,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 171,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 2e-05,
+        "batch_size": 16,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "checkpoint": "FacebookAI/roberta-base",
+          "resolved_revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b",
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "cnn",
+      "dataset": "urldata",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 526,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 176,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 171,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "embedding_dim": 96,
+          "vocab_size_limit": 50000,
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "lstm",
+      "dataset": "urldata",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 526,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 176,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 171,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "embedding_dim": 96,
+          "vocab_size_limit": 50000,
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": null
+    },
+    {
+      "model": "xgboost",
+      "dataset": "phishtank",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 528,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 178,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 174,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "Not applicable (gradient-boosted trees)",
+        "learning_rate": 0.08,
+        "batch_size": null,
+        "loss": "binary:logistic objective; validation logloss is monitored for early stopping (error and logloss are evaluated).",
+        "epochs_requested": null,
+        "epochs_completed": null,
+        "max_boosting_rounds": 500,
+        "recorded_boosting_rounds": 90,
+        "best_validation_round": 89,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation logloss",
+        "gradient_clip_norm": null,
+        "other_parameters": {
+          "max_features": 100000,
+          "ngram_range": [
+            1,
+            2
+          ],
+          "min_df": 2,
+          "max_depth": 6,
+          "scale_pos_weight": 1.0,
+          "threads": 11
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": {
+        "positive_source": "dataset_phishtank.csv",
+        "positive_filter": "verified=yes and online=yes",
+        "negative_source": "urldata.csv rows labelled good",
+        "phishing_hosts_excluded_from_negative_pool": 55977,
+        "positive_rows": 59840,
+        "negative_rows": 344658,
+        "negative_policy": "All distinct urldata good URLs whose hostname is not present in the PhishTank positive feed; URLs sharing a host are kept in the same split."
+      }
+    },
+    {
+      "model": "bert",
+      "dataset": "phishtank",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 528,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 178,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 174,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 2e-05,
+        "batch_size": 16,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "checkpoint": "google-bert/bert-base-uncased",
+          "resolved_revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": {
+        "positive_source": "dataset_phishtank.csv",
+        "positive_filter": "verified=yes and online=yes",
+        "negative_source": "urldata.csv rows labelled good",
+        "phishing_hosts_excluded_from_negative_pool": 55977,
+        "positive_rows": 59840,
+        "negative_rows": 344658,
+        "negative_policy": "All distinct urldata good URLs whose hostname is not present in the PhishTank positive feed; URLs sharing a host are kept in the same split."
+      }
+    },
+    {
+      "model": "roberta",
+      "dataset": "phishtank",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 528,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 178,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 174,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 2e-05,
+        "batch_size": 16,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "checkpoint": "FacebookAI/roberta-base",
+          "resolved_revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b",
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": {
+        "positive_source": "dataset_phishtank.csv",
+        "positive_filter": "verified=yes and online=yes",
+        "negative_source": "urldata.csv rows labelled good",
+        "phishing_hosts_excluded_from_negative_pool": 55977,
+        "positive_rows": 59840,
+        "negative_rows": 344658,
+        "negative_policy": "All distinct urldata good URLs whose hostname is not present in the PhishTank positive feed; URLs sharing a host are kept in the same split."
+      }
+    },
+    {
+      "model": "cnn",
+      "dataset": "phishtank",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 528,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 178,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 174,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "embedding_dim": 96,
+          "vocab_size_limit": 50000,
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": {
+        "positive_source": "dataset_phishtank.csv",
+        "positive_filter": "verified=yes and online=yes",
+        "negative_source": "urldata.csv rows labelled good",
+        "phishing_hosts_excluded_from_negative_pool": 55977,
+        "positive_rows": 59840,
+        "negative_rows": 344658,
+        "negative_policy": "All distinct urldata good URLs whose hostname is not present in the PhishTank positive feed; URLs sharing a host are kept in the same split."
+      }
+    },
+    {
+      "model": "lstm",
+      "dataset": "phishtank",
+      "status": "completed",
+      "seed": 42,
+      "device": "cpu",
+      "dataset_rows": 1000,
+      "dataset_class_counts": {
+        "legitimate": 500,
+        "phishing": 500
+      },
+      "splits": {
+        "train": {
+          "rows": 600,
+          "percent_of_dataset": 60.0,
+          "groups": 528,
+          "class_counts": {
+            "legitimate": 300,
+            "phishing": 300
+          }
+        },
+        "validation": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 178,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        },
+        "test": {
+          "rows": 200,
+          "percent_of_dataset": 20.0,
+          "groups": 174,
+          "class_counts": {
+            "legitimate": 100,
+            "phishing": 100
+          }
+        }
+      },
+      "positive_label": "phishing",
+      "decision_threshold": 0.5,
+      "training": {
+        "optimizer": "AdamW",
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "loss": "Weighted cross-entropy; class weights computed from training labels.",
+        "epochs_requested": 1,
+        "epochs_completed": 1,
+        "max_boosting_rounds": null,
+        "recorded_boosting_rounds": null,
+        "best_validation_round": null,
+        "early_stopping_patience": 1,
+        "early_stopping_metric": "validation loss",
+        "gradient_clip_norm": 1.0,
+        "best_epoch": 1,
+        "other_parameters": {
+          "embedding_dim": 96,
+          "vocab_size_limit": 50000,
+          "max_length": 128,
+          "class_weighting": "balanced"
+        }
+      },
+      "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+      "test_loss_definition": "Unweighted binary log loss.",
+      "phishtank_negative_sampling": {
+        "positive_source": "dataset_phishtank.csv",
+        "positive_filter": "verified=yes and online=yes",
+        "negative_source": "urldata.csv rows labelled good",
+        "phishing_hosts_excluded_from_negative_pool": 55977,
+        "positive_rows": 59840,
+        "negative_rows": 344658,
+        "negative_policy": "All distinct urldata good URLs whose hostname is not present in the PhishTank positive feed; URLs sharing a host are kept in the same split."
+      }
+    }
+  ]
+}

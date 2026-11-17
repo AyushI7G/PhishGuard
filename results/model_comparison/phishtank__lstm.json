@@ -1,0 +1,97 @@
+{
+  "status": "completed",
+  "model": "lstm",
+  "dataset": "phishtank",
+  "generated_at": "2026-10-31T10:53:57.222755+00:00",
+  "positive_label": "phishing",
+  "decision_threshold": 0.5,
+  "confusion_matrix_label_order": [
+    "legitimate",
+    "phishing"
+  ],
+  "seed": 42,
+  "device": "cpu",
+  "hyperparameters": {
+    "embedding_dim": 96,
+    "batch_size": 128,
+    "learning_rate": 0.001,
+    "vocab_size_limit": 50000,
+    "max_length": 128,
+    "class_weighting": "balanced"
+  },
+  "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+  "model_config": {
+    "bert_checkpoint": null,
+    "roberta_checkpoint": null,
+    "max_length": 128,
+    "epochs_requested": 1,
+    "best_epoch": 1
+  },
+  "dataset_rows": 1000,
+  "class_counts": {
+    "legitimate": 500,
+    "phishing": 500
+  },
+  "splits": {
+    "train": {
+      "rows": 600,
+      "groups": 528,
+      "class_counts": {
+        "legitimate": 300,
+        "phishing": 300
+      }
+    },
+    "validation": {
+      "rows": 200,
+      "groups": 178,
+      "class_counts": {
+        "legitimate": 100,
+        "phishing": 100
+      }
+    },
+    "test": {
+      "rows": 200,
+      "groups": 174,
+      "class_counts": {
+        "legitimate": 100,
+        "phishing": 100
+      }
+    }
+  },
+  "phishtank_negative_sampling": {
+    "positive_source": "dataset_phishtank.csv",
+    "positive_filter": "verified=yes and online=yes",
+    "negative_source": "urldata.csv rows labelled good",
+    "phishing_hosts_excluded_from_negative_pool": 55977,
+    "positive_rows": 59840,
+    "negative_rows": 344658,
+    "negative_policy": "All distinct urldata good URLs whose hostname is not present in the PhishTank positive feed; URLs sharing a host are kept in the same split."
+  },
+  "metrics": {
+    "accuracy": 0.995,
+    "precision": 0.9900990099009901,
+    "recall": 1.0,
+    "f1": 0.9950248756218906,
+    "log_loss": 0.4176184009632092,
+    "confusion_matrix": [
+      [
+        99,
+        1
+      ],
+      [
+        0,
+        100
+      ]
+    ]
+  },
+  "training_curve": [
+    {
+      "epoch": 1,
+      "training_loss": 0.5947785003980001,
+      "training_accuracy": 0.7783333333333333,
+      "validation_loss": 0.41531330466270444,
+      "validation_accuracy": 0.995
+    }
+  ],
+  "elapsed_seconds": 7.796999999962281
+}

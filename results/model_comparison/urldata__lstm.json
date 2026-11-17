@@ -1,0 +1,89 @@
+{
+  "status": "completed",
+  "model": "lstm",
+  "dataset": "urldata",
+  "generated_at": "2026-10-31T10:39:51.296159+00:00",
+  "positive_label": "phishing",
+  "decision_threshold": 0.5,
+  "confusion_matrix_label_order": [
+    "legitimate",
+    "phishing"
+  ],
+  "seed": 42,
+  "device": "cpu",
+  "hyperparameters": {
+    "embedding_dim": 96,
+    "batch_size": 128,
+    "learning_rate": 0.001,
+    "vocab_size_limit": 50000,
+    "max_length": 128,
+    "class_weighting": "balanced"
+  },
+  "training_accuracy_method": "Per-round training-set evaluation for XGBoost; in-batch pre-update predictions for neural models.",
+  "model_config": {
+    "bert_checkpoint": null,
+    "roberta_checkpoint": null,
+    "max_length": 128,
+    "epochs_requested": 1,
+    "best_epoch": 1
+  },
+  "dataset_rows": 1000,
+  "class_counts": {
+    "legitimate": 500,
+    "phishing": 500
+  },
+  "splits": {
+    "train": {
+      "rows": 600,
+      "groups": 526,
+      "class_counts": {
+        "legitimate": 300,
+        "phishing": 300
+      }
+    },
+    "validation": {
+      "rows": 200,
+      "groups": 176,
+      "class_counts": {
+        "legitimate": 100,
+        "phishing": 100
+      }
+    },
+    "test": {
+      "rows": 200,
+      "groups": 171,
+      "class_counts": {
+        "legitimate": 100,
+        "phishing": 100
+      }
+    }
+  },
+  "phishtank_negative_sampling": null,
+  "metrics": {
+    "accuracy": 0.635,
+    "precision": 0.608,
+    "recall": 0.76,
+    "f1": 0.6755555555555556,
+    "log_loss": 0.6575560507056741,
+    "confusion_matrix": [
+      [
+        51,
+        49
+      ],
+      [
+        24,
+        76
+      ]
+    ]
+  },
+  "training_curve": [
+    {
+      "epoch": 1,
+      "training_loss": 0.6706782229741415,
+      "training_accuracy": 0.6233333333333333,
+      "validation_loss": 0.6493722486495972,
+      "validation_accuracy": 0.695
+    }
+  ],
+  "elapsed_seconds": 4.6560000000172295
+}
